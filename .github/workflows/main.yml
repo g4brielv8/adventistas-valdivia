@@ -48,16 +48,16 @@ jobs:
             git push origin "$TAG"
           fi
 
-      - name: Publicar aplicación
-  run: npx electron-builder --win --x64 --publish always
-  if: runner.os == 'Windows'
-  env:
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Publicar aplicación Windows
+        if: runner.os == 'Windows'
+        run: npx electron-builder --win --x64 --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
-- name: Publicar aplicación Mac
-  run: npx electron-builder --mac --publish always
-  if: runner.os == 'macOS'
-  env:
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Publicar aplicación Mac
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
