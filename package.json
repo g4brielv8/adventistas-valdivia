@@ -1,0 +1,102 @@
+{
+  "name": "adventistas-valdivia",
+  "productName": "Adventistas Valdivia",
+  "version": "1.1.0",
+  "description": "Adventistas Valdivia",
+  "author": "IASD Valdivia Norte",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "protect": "node protect.js"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "latest",
+    "electron-builder": "latest"
+  },
+  "build": {
+    "appId": "cl.iasd.adventistasvaldivia",
+    "productName": "Adventistas Valdivia",
+    "directories": {
+      "output": "dist"
+    },
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "crypt.js",
+      "build/icon.png",
+      "app/**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "g4brielv8",
+        "repo": "adventistas-valdivia",
+        "releaseType": "release"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.education",
+      "hardenedRuntime": true,
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "background": "build/dmg-bg.png",
+      "iconSize": 110,
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 140,
+          "y": 190,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "shortcutName": "Adventistas Valdivia",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    }
+  }
+}
