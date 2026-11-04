@@ -3,13 +3,8 @@ name: Publicar versión
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - package.json
-      - protect.js
-      - .github/workflows/publicar.yml
-
+    branches: [main]
+    paths: ['package.json']
   workflow_dispatch:
 
 permissions:
@@ -17,65 +12,37 @@ permissions:
 
 jobs:
   build:
-    name: Compilar ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            platform: win
-          - os: macos-latest
-            platform: mac
+        os: [windows-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Descargar repositorio
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Instalar dependencias
-        run: npm install
+      - run: npm install
 
-      - name: Proteger aplicación
-        run: node protect.js
+      - run: node protect.js
 
-      - name: Preparar publicación
+      - name: Crear tag
         shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin --tags
 
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG"; then
-            echo "El tag $TAG ya existe."
-          else
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
             git tag "$TAG" "$GITHUB_SHA"
-            git push origin "refs/tags/$TAG"
+            git push origin "$TAG"
           fi
 
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Compilar y publicar Windows
-        if: matrix.platform == 'win'
-        run: npx electron-builder --win --x64 --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Compilar y publicar macOS
-        if: matrix.platform == 'mac'
-        run: npx electron-builder --mac --publish always
+      - run: npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Mostrar versión publicada
-        run: echo "Versión compilada: ${{ env.VERSION }}"
