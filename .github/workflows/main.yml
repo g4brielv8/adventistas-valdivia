@@ -1,112 +1,29 @@
-
 name: Publicar versión
-
 on:
   push:
     branches: [main]
     paths: ['package.json']
   workflow_dispatch:
-
 permissions:
   contents: write
-
-concurrency:
-  group: publicar-version
-  cancel-in-progress: false
-
 jobs:
-
-  preparar:
-    runs-on: ubuntu-latest
-
-    outputs:
-      release_existia: ${{ steps.release.outputs.existing }}
-
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Crear etiqueta y publicación
-        id: release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v$VERSION"
-
-          git fetch origin --tags
-
-          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
-            git tag "$TAG" "$GITHUB_SHA"
-            git push origin "$TAG"
-          fi
-
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "existing=true" >> "$GITHUB_OUTPUT"
-            echo "La publicación ya existe."
-          else
-            echo "existing=false" >> "$GITHUB_OUTPUT"
-            gh release create "$TAG" \
-              --title "$TAG" \
-              --notes "Adventistas Valdivia $TAG"
-            echo "Publicación creada."
-          fi
-
-          # Limpiar únicamente archivos anteriores de Windows.
-          for ASSET in \
-            "Adventistas-Valdivia-Setup-$VERSION.exe" \
-            "Adventistas-Valdivia-Setup-$VERSION.exe.blockmap" \
-            "latest.yml"
-          do
-            if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fxq "$ASSET"; then
-              gh release delete-asset "$TAG" "$ASSET" --yes
-              echo "Eliminado: $ASSET"
-            fi
-          done
-
-  windows:
-    needs: preparar
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - run: npm install
-
       - run: node protect.js
-
-      - name: Publicar aplicación Windows
-        run: npx electron-builder --win --x64 --publish always
+      - run: npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-  mac:
-    needs: preparar
-    if: needs.preparar.outputs.release_existia == 'false'
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - run: npm install
-
-      - run: node protect.js
-
-      - name: Publicar aplicación Mac
-        run: npx electron-builder --mac --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
