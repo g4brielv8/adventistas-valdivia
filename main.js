@@ -11,31 +11,33 @@ const CLAVE = ['__CLAVE__'].join('');
 const BG = '#6f95bb';
 const ICON = path.join(__dirname, 'build', 'icon.png');
 const WP = { backgroundThrottling: false, devTools: !app.isPackaged, autoplayPolicy: 'no-user-gesture-required' };
-let ctl = null, disp = null, dispId = null;
+let ctl = null, disp = null, dispId = null, dispWin = false;
 
 // Pantalla del templo: ventana sin bordes, a pantalla completa, en el monitor elegido en Ajustes (Esc la cierra).
-function openDisplay(id) {
+function openDisplay(id, mode) {
+  const win = mode === 'win';                   // 'win' = ventana normal (para capturar en OBS); si no, pantalla completa sin bordes
   const all = screen.getAllDisplays(), primary = screen.getPrimaryDisplay();
   const target = (id != null ? all.find(d => d.id === id) : null) || all.find(d => d.id !== primary.id) || null;
   const tid = target ? target.id : 0;
-  if (disp && !disp.isDestroyed()) {            // si ya está abierta: la misma pantalla = cerrar; otra pantalla = moverla
-    const same = dispId === tid;
+  if (disp && !disp.isDestroyed()) {            // si ya está abierta: igual = cerrar; distinta = reabrir
+    const same = dispId === tid && dispWin === win;
     disp.close();
     if (same) return;
   }
-  const o = { icon: ICON, backgroundColor: BG, frame: false, autoHideMenuBar: true, show: false, title: 'Pantalla del templo', webPreferences: WP };
-  if (target) Object.assign(o, { x: target.bounds.x, y: target.bounds.y, width: target.bounds.width, height: target.bounds.height });
-  else Object.assign(o, { width: 1280, height: 720 });
+  const o = { icon: ICON, backgroundColor: BG, autoHideMenuBar: true, show: false, webPreferences: WP };
+  if (win) Object.assign(o, { title: 'Pantalla del templo (OBS)', width: 1280, height: 720, ...(target ? { x: target.bounds.x + 60, y: target.bounds.y + 60 } : {}) });
+  else if (target) Object.assign(o, { frame: false, title: 'Pantalla del templo', x: target.bounds.x, y: target.bounds.y, width: target.bounds.width, height: target.bounds.height });
+  else Object.assign(o, { frame: false, title: 'Pantalla del templo', width: 1280, height: 720 });
   const w = new BrowserWindow(o);
-  disp = w; dispId = tid;
+  disp = w; dispId = tid; dispWin = win;
   w.setMenuBarVisibility(false);
   w.loadURL('app://local/index.html#pantalla');
   w.once('ready-to-show', () => {
     if (w.isDestroyed()) return;
     w.show();
-    if (target) { if (process.platform === 'darwin') w.setSimpleFullScreen(true); else w.setFullScreen(true); }
+    if (!win && target) { if (process.platform === 'darwin') w.setSimpleFullScreen(true); else w.setFullScreen(true); }
   });
-  w.webContents.on('before-input-event', (e, i) => { if (i.type === 'keyDown' && i.key === 'Escape' && !w.isDestroyed()) w.close(); });
+  if (!win) w.webContents.on('before-input-event', (e, i) => { if (i.type === 'keyDown' && i.key === 'Escape' && !w.isDestroyed()) w.close(); });
   w.on('closed', () => { if (disp === w) { disp = null; dispId = null; } });
 }
 
@@ -47,7 +49,7 @@ ipcMain.handle('displays', () => {
     primary: d.id === primary
   }));
 });
-ipcMain.handle('open-temple', (e, id) => { try { openDisplay(id); } catch (err) { console.error(err); } });
+ipcMain.handle('open-temple', (e, id, mode) => { try { openDisplay(id, mode); } catch (err) { console.error(err); } });
 ipcMain.handle('version', () => app.getVersion());
 
 function createControl() {
