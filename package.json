@@ -1,3 +1,4 @@
+
 {
   "name": "adventistas-valdivia",
   "productName": "Adventistas Valdivia",
@@ -40,7 +41,8 @@
     ],
     "mac": {
       "category": "public.app-category.education",
-      "hardenedRuntime": true,
+      "hardenedRuntime": false,
+      "identity": null,
       "icon": "build/icon.png",
       "target": [
         {
